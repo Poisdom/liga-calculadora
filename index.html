@@ -1,0 +1,120 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calculadora del draft</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#11131a;--muted:#6b7280;--line:#e3e6eb;--accent:#2a78d6;--bad:#d64545;--badbg:#fde8e8;--good:#1f9d6b;--goodbg:#e3f6ee;--zero:#cfd5dd}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1115;--card:#181b21;--ink:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;--accent:#5598e7;--bad:#ff7070;--badbg:#3a1d1f;--good:#4fd39b;--goodbg:#143027;--zero:#3a414c}}
+:root[data-theme=dark]{--bg:#0f1115;--card:#181b21;--ink:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;--accent:#5598e7;--bad:#ff7070;--badbg:#3a1d1f;--good:#4fd39b;--goodbg:#143027;--zero:#3a414c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1200px;margin:0 auto;padding:16px}h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px}
+a{color:var(--accent)}.muted{color:var(--muted)}
+.bar{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:8px}
+.sum{font-size:16px;font-weight:700}.sum.over{color:var(--bad)}.warn{margin-top:4px;font-size:13px}.warn b{color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+button.t{color:#11131a;border:0;font-weight:700}input[type=search]{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:0;flex:1 1 160px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.chip{display:inline-flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:0 8px 0 0;font-size:12px}
+.chip img{width:28px;height:28px}.chip button{border:0;padding:0 2px;background:none;color:var(--muted)}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:center;white-space:nowrap}
+th img{width:32px;height:32px;display:block;margin:auto}td.ty{text-align:left;font-weight:700}
+td.w2{background:var(--badbg);color:var(--bad);font-weight:700}td.w4{background:var(--bad);color:#fff;font-weight:700}
+td.r{background:var(--goodbg);color:var(--good)}td.im{background:var(--zero);font-weight:700}
+tr.flag td.ty,tr.flag td.cnt{color:var(--bad)}td.cnt{font-weight:700}
+.tier{margin-top:16px}.tier h3{font-size:13px;margin:0 0 6px;color:var(--muted)}.tier h3 b{color:var(--ink);font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:6px}
+.mon{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px 6px 2px 4px;cursor:pointer;min-width:0}
+.mon img{width:40px;height:40px;flex:none}.mon .nm{font-weight:600;line-height:1.2}.mon .tg{font-size:11px;font-weight:700;border-radius:4px;padding:0 4px;color:#11131a}
+.mon.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}.mon.taken .nm{color:var(--muted)}.mon.caro{opacity:.45}
+.mon input{margin:0 2px 0 0}.mon span{min-width:0;display:flex;flex-direction:column}
+</style></head><body><main>
+<h1 id="h1">Calculadora del draft</h1>
+<div class="muted">Marca Pokémon para ver tus puntos y las debilidades del equipo. Recarga la página para ver los picks nuevos.<span id="link"></span></div>
+<div class="bar"><div id="sum" class="sum"></div><div id="warn" class="warn"></div></div><div id="chips" class="chips"></div>
+<div class="row"><span class="muted">Cargar equipo:</span><span id="teams" class="row" style="margin:0"></span><button id="clear">Vaciar</button></div>
+<h2>Debilidades del equipo</h2><div class="muted" style="margin-bottom:6px">Multiplicador que recibe cada Pokémon de un ataque de ese tipo. Solo tipos: no cuenta habilidades como Levitate.</div>
+<div id="table" class="wrap"></div>
+<h2>Pool</h2>
+<div class="row"><label><input type="checkbox" id="libres" checked> Solo libres</label><input type="search" id="q" placeholder="Buscar Pokémon o tipo"></div>
+<div id="board"></div>
+</main><script>
+const TYPES = ["Normal","Fire","Water","Electric","Grass","Ice","Fighting","Poison","Ground","Flying","Psychic","Bug","Rock","Ghost","Dragon","Dark","Steel","Fairy"], CHART = {"Normal":"000000100000030000","Fire":"021022001002100022","Water":"022112000000000020","Electric":"000200001200000020","Grass":"012221012101000000","Ice":"010002100000100010","Fighting":"000000000112200201","Poison":"000020221012000002","Ground":"001311020000200000","Flying":"000121203002100000","Psychic":"000000200021010100","Bug":"010020202100100000","Rock":"221010121200000010","Ghost":"300000320002010100","Dragon":"022221000000001001","Dark":"000000100031020201","Steel":"210022131222202022","Fairy":"000000210002003210"};
+function eff(atk, types, chart = CHART, order = TYPES) {
+  const i = order.indexOf(atk);
+  return types.filter(t => chart[t]).reduce((m, t) => m * [1, 2, 0.5, 0][+chart[t][i]], 1);
+}
+function parseDatos(csv) {
+  return JSON.parse(csv.trim().split("\n").map(l => l.slice(1, -1).replaceAll('""', '"')).join(""));
+}
+const HOJA = new URLSearchParams(location.search).get("hoja");
+(async () => {
+let D;
+try {
+  if (!HOJA) throw new Error("Abre la calculadora desde el enlace de la hoja del draft o de #info (le falta ?hoja=…).");
+  const r = await fetch("https://docs.google.com/spreadsheets/d/" + encodeURIComponent(HOJA) + "/gviz/tq?tqx=out:csv&headers=0&sheet=Datos&t=" + Date.now());
+  if (!r.ok) throw new Error("La hoja no responde (" + r.status + "). ¿Es la del draft actual?");
+  D = parseDatos(await r.text());
+} catch (e) {
+  document.querySelector("main").innerHTML = "<h1>Calculadora del draft</h1><p>" + (e instanceof SyntaxError ? "No encuentro los datos en la hoja." : e.message) + "</p>";
+  return;
+}
+D.types = TYPES; D.chart = CHART;
+document.getElementById("h1").textContent = "Calculadora · Draft " + D.n;
+document.getElementById("link").innerHTML = ' · <a href="https://docs.google.com/spreadsheets/d/' + encodeURIComponent(HOJA) + '">Hoja del draft</a>';
+const IMG = s => s ? "https://play.pokemonshowdown.com/sprites/gen5/" + s + ".png" : "";
+const owner = {}; for (const [k, p] of Object.entries(D.picks)) owner[p.poke] = [p.who, +k];
+const mon = {}; for (const [name, cost, t1, t2, sprite] of D.pool) mon[name] = { name, cost, types: [t1, t2].filter(Boolean), sprite };
+for (const p of Object.values(D.picks)) mon[p.poke] ??= { name: p.poke, cost: p.cost, types: [], sprite: "" }; // fuera del pool
+const color = t => D.colors[D.trainers.indexOf(t)] ?? "#8a909c";
+const KEY = "calc-" + D.n;
+let sel = []; try { sel = JSON.parse(localStorage.getItem(KEY) || "[]").filter(n => mon[n]); } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(sel)); } catch {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmt = m => m === 1 ? "" : m === 0.5 ? "½" : m === 0.25 ? "¼" : String(m);
+
+function toggle(name) { sel = sel.includes(name) ? sel.filter(n => n !== name) : [...sel, name]; save(); render(); }
+function render() {
+  const team = sel.map(n => mon[n]), used = team.reduce((s, m) => s + m.cost, 0), left = D.budget - used;
+  $("sum").className = "sum" + (left < 0 ? " over" : "");
+  $("sum").textContent = team.length + " Pokémon · " + used + "/" + D.budget + " pts · " + (left < 0 ? "⚠️ se pasa " + -left : "quedan " + left);
+  $("chips").innerHTML = team.map(m => '<span class="chip"><img alt="" src="' + IMG(m.sprite) + '">' + esc(m.name) + " · " + m.cost +
+    '<button aria-label="Quitar ' + esc(m.name) + '" data-del="' + esc(m.name) + '">✕</button></span>').join("");
+  // tabla de debilidades
+  const rows = D.types.map(a => { const ms = team.map(m => m.types.length ? eff(a, m.types, D.chart, D.types) : 1);
+    const weak = ms.filter(x => x > 1).length, res = ms.filter(x => x < 1).length; return { a, ms, weak, res, flag: weak >= 3 || weak - res >= 2 }; });
+  const bad = rows.filter(r => r.flag || (r.weak && !r.res)).sort((x, y) => y.weak - y.res - (x.weak - x.res));
+  $("warn").innerHTML = !team.length ? '<span class="muted">Marca Pokémon abajo o carga un equipo.</span>' : bad.length
+    ? "Débil a: " + bad.map(r => "<b>" + r.a + "</b> (" + r.weak + " débil" + (r.weak > 1 ? "es" : "") + ", " + r.res + " resiste" + (r.res === 1 ? "" : "n") + ")").join(" · ")
+    : "Sin debilidades descubiertas.";
+  $("table").innerHTML = !team.length ? '<div class="muted" style="padding:12px">Aún no hay Pokémon marcados.</div>' :
+    "<table><thead><tr><th>Ataque</th>" + team.map(m => '<th title="' + esc(m.name) + '"><img alt="' + esc(m.name) + '" src="' + IMG(m.sprite) + '"></th>').join("") +
+    "<th>Débiles</th><th>Resisten</th></tr></thead><tbody>" + rows.map(r => '<tr class="' + (r.flag ? "flag" : "") + '"><td class="ty">' + r.a + "</td>" +
+      r.ms.map(x => '<td class="' + (x >= 4 ? "w4" : x > 1 ? "w2" : x === 0 ? "im" : x < 1 ? "r" : "") + '">' + fmt(x) + "</td>").join("") +
+      '<td class="cnt">' + (r.weak || "") + '</td><td class="cnt">' + (r.res || "") + "</td></tr>").join("") + "</tbody></table>";
+  // pool por tiers, de caro a barato
+  const libres = $("libres").checked, q = $("q").value.trim().toLowerCase();
+  const costs = [...new Set(D.pool.map(r => r[1]))].sort((a, b) => b - a);
+  $("board").innerHTML = costs.map(c => {
+    const all = D.pool.filter(r => r[1] === c).map(r => mon[r[0]]);
+    const show = all.filter(m => (!libres || !owner[m.name] || sel.includes(m.name)) && (!q || (m.name + " " + m.types.join(" ")).toLowerCase().includes(q)));
+    if (!show.length) return "";
+    return '<section class="tier"><h3><b>' + c + " pts</b> · " + all.filter(m => !owner[m.name]).length + " de " + all.length + ' libres</h3><div class="grid">' +
+      show.map(m => { const o = owner[m.name], on = sel.includes(m.name);
+        return '<label class="mon' + (on ? " on" : "") + (o ? " taken" : "") + (!on && !o && m.cost > left ? " caro" : "") + '"><input type="checkbox" data-mon="' + esc(m.name) + '"' + (on ? " checked" : "") + ">" +
+          '<img alt="" loading="lazy" src="' + IMG(m.sprite) + '"><span><span class="nm">' + esc(m.name) + "</span>" +
+          (o ? '<span><span class="tg" style="background:' + color(o[0]) + '">' + esc(o[0]) + " · #" + o[1] + "</span></span>" : '<span class="muted" style="font-size:11px">' + m.types.join(" / ") + "</span>") +
+          "</span></label>"; }).join("") + "</div></section>";
+  }).join("") || '<div class="muted">Nada coincide.</div>';
+}
+$("teams").innerHTML = D.order.map(t => '<button class="t" style="background:' + color(t) + '" data-team="' + esc(t) + '">' + esc(t) + "</button>").join("");
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.team) { sel = Object.entries(D.picks).filter(([, p]) => p.who === b.dataset.team).sort((x, y) => x[0] - y[0]).map(([, p]) => p.poke); save(); render(); }
+  else if (b.dataset.del) toggle(b.dataset.del);
+  else if (b.id === "clear") { sel = []; save(); render(); }
+});
+document.addEventListener("change", e => { if (e.target.dataset.mon) toggle(e.target.dataset.mon); else render(); });
+$("q").addEventListener("input", render);
+render();
+})();
+</script></body></html>
